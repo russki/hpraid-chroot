@@ -11,8 +11,15 @@ This is a self-contained Centos 6 x86_64 hpacucli so you can use it your %pre of
 
 # How to use it in your %pre script
 
+### Get prebuilt hpraid.tar.gz
+* wget -O hpraid-chroot.zip https://github.com/russki/hpraid-chroot/archive/master.zip
+* unzip hpraid-chroot.zip
+
+Upload hpraid-chroot-master/hpraid.tar.gz somewhere on your interwebz
+
+### In your kickstart:
 * cd /tmp;
-* wget --no-check-certificate -O hpraid.tar.gz https://github.com/russki/hpraid-chroot/blob/master/hpraid.tar.gz;
+* wget -O hpraid.tar.gz http://YOURWEBSITE/hpraid.tar.gz;
 * tar xzf hpraid.tar.gz;
 * mount -t proc proc hpraid/proc;
 * mount -t sysfs sysfs hpraid/sys;
