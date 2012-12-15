@@ -1,0 +1,59 @@
+#!/bin/sh
+
+if [ $# -lt 1 ]; then
+    echo "How to use:"
+    echo -e "\t$0 HPACUCLI.RPM"
+    echo -e "\tThis will unpack hpacucli rpm and make a chroot environment"
+    echo
+    exit 1
+fi
+
+RPM=$1
+OUTPUT='hpraid'
+
+if [ ! -s $RPM ]; then
+    echo -e "#### Something wrong with the $RPM, PLEASE CHECK\n\n";
+    exit 1;
+fi
+
+echo "-- Installing required rpms"
+yum install -q -y 'libstdc++.so.6' redhat-lsb rsync || (echo "#### WAS NOT ABLE TO INSTALL REQUIRED RPMS"; exit 1)
+
+echo "-- Making temporary folder"
+rm -Rf $OUTPUT
+mkdir $OUTPUT
+cd $OUTPUT
+echo "-- Unpacking RPM"
+rpm2cpio ../$RPM | cpio -id || (echo "#### ERROR WHILE UNPACKING RPM $RPM"; exit 1)
+
+echo "-- Making required folders in chroot"
+mkdir -p proc sys bin etc lib usr/bin var/opt/compaq/locks
+
+echo "-- Copying necessary files"
+alias cp='cp'
+rsync -aq /dev/ ./dev/
+rsync -aq /lib64/ ./lib64/
+for i in bash chmod chown grep mkdir ps sh touch uname ls gawk awk cat; do cp -a /bin/$i bin/; done
+for i in group passwd; do cp /etc/$i etc/; done
+for i in ld-linux.so.2 libc.so.6 libdl.so.2 libgcc_s.so.1 libm.so.6 libpthread.so.0 ; do cp /lib/$i ./lib; done
+cp /usr/lib/libstdc++.so.6 ./lib
+cp /usr/lib64/libstdc++.so.6 ./lib64
+cp /usr/bin/wc usr/bin/
+for i in ACU-XE CPQACU_MUTEX CLI_SCRIPTING_MUTEX; do touch var/opt/compaq/locks/$i; done
+
+
+echo "-- Packing up the result"
+cd ../
+tar czfp ${OUTPUT}.tar.gz $OUTPUT
+rm -Rf $OUTPUT
+
+echo -e "\n\n\n###### File has been compressed into ${OUTPUT}.tar.gz"
+echo "###### Here's how to use it in your kickstart"
+echo -e "\n"
+echo "tar xzvf ${OUTPUT}.tar.gz"
+echo "mount -t proc proc hpraid/proc"
+echo "mount -t sysfs sysfs hpraid/sys"
+echo "mount --bind /dev hpraid/dev"
+echo "CLI='chroot hpraid /usr/sbin/hpacucli'"
+echo '$CLI "controller slot=0 show"'
+echo
